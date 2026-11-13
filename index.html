@@ -215,7 +215,12 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
 .check { display: flex; align-items: center; gap: 8px; }
 .pair { display: flex; gap: 6px; }
 .pair input { width: 100%; }
-.dest-edit { display: grid; grid-template-columns: 1.2fr .7fr 1.6fr .6fr .6fr .8fr auto; gap: 6px; align-items: end; }
+.dest-list { display: grid; gap: 10px; }
+.dest-edit { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1.1fr) auto; grid-template-areas: "name name name air rm" "how h m cost rm"; gap: 10px 12px; align-items: end; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.dest-edit .a-name { grid-area: name; } .dest-edit .a-air { grid-area: air; } .dest-edit .a-rm { grid-area: rm; align-self: start; }
+.dest-edit .a-how { grid-area: how; } .dest-edit .a-h { grid-area: h; } .dest-edit .a-m { grid-area: m; } .dest-edit .a-cost { grid-area: cost; }
+.dest-edit .field input { background: var(--surface); }
+@media (max-width: 560px) { .dest-edit { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "name name" "air rm" "how how" "h m" "cost cost"; } .dest-edit .a-rm { align-self: end; justify-self: end; } }
 .dest-edit .field > span { font-size: 11.5px; }
 .hint { font-size: 12.5px; color: var(--muted); }
 .parsed { display: grid; gap: 6px; }
@@ -236,8 +241,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   tbody td.num { text-align: left; }
   .money-sub, .date { white-space: normal; }
   .row-actions { justify-content: flex-start; flex-wrap: wrap; }
-  .dest-edit { grid-template-columns: 1fr 1fr; }
-}
+  }
 /* Redesign: header, trip bar, lower panel, work-in-progress items */
 .top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; }
 .top-title { display: grid; gap: 4px; min-width: 0; }
@@ -365,15 +369,15 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     <div class="dlg-body">
       <div class="grid">
         <label class="field"><span>Trip name</span><input id="t_name" required></label>
-        <label class="field"><span>Flying from (city or airport code)</span><input id="t_from" maxlength="20" placeholder="MEL"></label>
+        <label class="field"><span>Flying from</span><input id="t_from" maxlength="20" placeholder="MEL or Melbourne"></label>
         <label class="field"><span>Leaving on</span><input id="t_date" type="date"></label>
         <label class="field"><span>Travellers</span><input id="t_pax" type="number" min="1" value="2"></label>
       </div>
       <fieldset>
         <legend>Destinations and how to get there from the airport</legend>
-        <div id="t_dests" class="parsed"></div>
+        <div id="t_dests" class="dest-list"></div>
         <div><button type="button" class="btn small" id="t_addDest">Add destination</button></div>
-        <p class="hint">The transfer details here fill in new options for that destination automatically.</p>
+        <p class="hint">Say how you get from the airport to each place. Leave the time and cost at 0 if you're staying in the city. Every flight to that place uses these details.</p>
       </fieldset>
     </div>
     <div class="dlg-foot">
@@ -748,13 +752,13 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   function destRow(d = {}) {
     const div = document.createElement("div"); div.className = "dest-edit";
     div.innerHTML = `
-      <label class="field"><span>Destination</span><input data-k="name" value="${esc(d.name || "")}" placeholder="Queenstown"></label>
-      <label class="field"><span>Airport</span><input data-k="airport" value="${esc(d.airport || "")}" placeholder="ZQN" maxlength="4"></label>
-      <label class="field"><span>Then by</span><input data-k="transferMethod" value="${esc(d.transferMethod || "")}" placeholder="Airport bus"></label>
-      <label class="field"><span>Hours</span><input data-k="h" type="number" min="0" value="${Math.floor(num(d.transferMins) / 60)}"></label>
-      <label class="field"><span>Mins</span><input data-k="m" type="number" min="0" max="59" value="${num(d.transferMins) % 60}"></label>
-      <label class="field"><span>A$ pp</span><input data-k="transferCost" type="number" min="0" value="${num(d.transferCost)}"></label>
-      <button type="button" class="btn ghost small danger" aria-label="Remove destination">Remove</button>`;
+      <label class="field a-name"><span>Destination</span><input data-k="name" value="${esc(d.name || "")}" placeholder="Queenstown"></label>
+      <label class="field a-air"><span>Airport code</span><input data-k="airport" value="${esc(d.airport || "")}" placeholder="ZQN" maxlength="4"></label>
+      <button type="button" class="btn ghost small danger a-rm" aria-label="Remove this destination">Remove</button>
+      <label class="field a-how"><span>From the airport by</span><input data-k="transferMethod" value="${esc(d.transferMethod || "")}" placeholder="Airport bus"></label>
+      <label class="field a-h"><span>Hours</span><input data-k="h" type="number" min="0" value="${Math.floor(num(d.transferMins) / 60)}"></label>
+      <label class="field a-m"><span>Minutes</span><input data-k="m" type="number" min="0" max="59" value="${num(d.transferMins) % 60}"></label>
+      <label class="field a-cost"><span>A$ per person</span><input data-k="transferCost" type="number" min="0" value="${num(d.transferCost)}"></label>`;
     div.querySelector("button").addEventListener("click", () => div.remove());
     return div;
   }
