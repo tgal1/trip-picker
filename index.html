@@ -105,7 +105,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .stepper button:hover { background: var(--accent-soft); }
 .stepper output { min-width: 28px; text-align: center; font-weight: 600; font-family: var(--f-mono); }
 .q-note { color: var(--muted); font-size: 13px; padding-bottom: 7px; }
-.q-note.busy { color: var(--accent); font-weight: 600; }
+.q-note.busy { color: var(--accent); font-weight: 600; padding-bottom: 0; }
 
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
@@ -234,40 +234,64 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   tbody tr.opt td[data-label]::before { content: attr(data-label); display: block; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
   tbody tr.opt td.c-opt, tbody tr.opt td.c-door, tbody tr.opt td.c-act { grid-column: 1 / -1; }
   tbody td.num { text-align: left; }
+  .money-sub, .date { white-space: normal; }
   .row-actions { justify-content: flex-start; flex-wrap: wrap; }
   .dest-edit { grid-template-columns: 1fr 1fr; }
 }
+/* Redesign: header, trip bar, lower panel, work-in-progress items */
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.top-title { display: grid; gap: 4px; min-width: 0; }
+.top h1 { font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; letter-spacing: -.01em; }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.trip-pick { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.tripbar { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 30px; }
+.tb-field { display: grid; gap: 6px; min-width: 0; }
+.tb-label { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tb-static { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 35px; font-weight: 600; }
+.tripbar .seg { flex-wrap: wrap; }
+.tripbar .seg button { padding: 7px 14px; }
+.seg button.wip, .btn.wip { color: var(--muted); cursor: not-allowed; opacity: .75; }
+.btn.wip:hover { border-color: var(--line); }
+.wip-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--warn-soft); color: var(--warn); padding: 2px 7px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
+.picks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.more { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; }
+.more-block { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.more-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.more-head h2 { font-size: 15px; font-weight: 700; }
+.transfers { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.transfers li { display: grid; gap: 2px; }
+.transfers span { color: var(--muted); }
+.transfers a { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; }
+.transfers a:hover { text-decoration: underline; }
+.more-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.empty .hint { margin: 0; }
+@media (max-width: 860px) { .more { grid-template-columns: 1fr; } .picks { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <header class="trip" id="trip"></header>
+  <header class="top" id="top"></header>
+  <section class="tripbar" id="tripbar" aria-label="Trip settings"></section>
   <div id="banner" class="banner" hidden></div>
   <section class="picks" id="picks" aria-label="Quick picks"></section>
   <div class="controls">
     <div class="ctl-group">
-      <div class="seg" id="destFilter" role="group" aria-label="Show destination"></div>
-      <label><input type="checkbox" id="hideOut"> Hide ruled out</label>
-    </div>
-    <div class="ctl-group">
       <label for="sortSel">Sort by
         <select id="sortSel">
-          <option value="total">Total cost per person</option>
-          <option value="door">Door-to-door time</option>
-          <option value="value">Best value</option>
+          <option value="total">Lowest total cost</option>
+          <option value="door">Quickest door to door</option>
           <option value="depart">Departure time</option>
-          <option value="fare">Flight fare only</option>
         </select>
       </label>
-      <label for="groupSel">Group
-        <select id="groupSel">
-          <option value="dest">By destination</option>
-          <option value="none">All together</option>
-        </select>
-      </label>
-      <label for="hourVal" title="Used for Best value: each hour of travel counts as this many dollars">An hour of travel is worth A$ <input type="number" id="hourVal" min="0" step="5"></label>
+      <div class="seg" id="groupSeg" role="group" aria-label="Table layout">
+        <button type="button" data-group="dest">By destination</button>
+        <button type="button" data-group="none">One list</button>
+      </div>
+    </div>
+    <div class="ctl-group">
+      <label><input type="checkbox" id="hideOut"> Hide ruled-out flights</label>
     </div>
   </div>
   <div id="staleNote" class="stale-note" hidden></div>
@@ -280,6 +304,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       <span>Costs are per person in A$ unless marked. Door-to-door time runs from take-off to arriving where you're staying.</span>
     </div>
   </section>
+  <section class="more" id="more" aria-label="Trip details and actions"></section>
   <p class="foot" id="foot"></p>
 </div>
 
@@ -412,7 +437,6 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const dep = parseLocal(o.depart), arr = parseLocal(o.arrive);
     const trip = currentTrip();
     const pax = Math.max(1, num(trip?.travellers, 1));
-    const value = total + (door / 60) * num(S.hourValue);
     const flags = [];
     if (dep && dep.getHours() < 5) { const prev = new Date(dep); prev.setDate(prev.getDate() - 1); flags.push(["warn", `At the airport the night of ${fmtDate(prev)}`]); }
     if (!bagsIncl && bags == null) flags.push(["warn", "Checked bags not included"]);
@@ -420,12 +444,11 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const depAirport = String(o.depAirport || trip?.from || "").toUpperCase();
     const tripFrom = String(trip?.from || "").toUpperCase();
     const stale = [];
-    if (o.depAirport && tripFrom && depAirport !== tripFrom) stale.push(`Leaves ${depAirport}, not ${tripFrom}`);
     if (trip?.date && o.depart && o.depart.slice(0, 10) !== trip.date) stale.push(`Flies ${fmtDate(dep)}, not ${fmtDate(new Date(trip.date + "T00:00"))}`);
     stale.reverse().forEach(m => flags.unshift(["bad", m]));
     if (o.overnight) flags.push(["warn", "Night's stay needed on the way"]);
     else if (arr && arr.getHours() >= 17) flags.push(["", "Lands after 5 pm: check the last bus"]);
-    return { bags, bagsIncl, extras, transferCost, total, buffer, door, dep, arr, pax, value, flags, depAirport, stale: stale.length > 0 };
+    return { bags, bagsIncl, extras, transferCost, total, buffer, door, dep, arr, pax, flags, depAirport, stale: stale.length > 0 };
   }
 
   // ---------- Data access ----------
@@ -460,9 +483,16 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   function failed(e) { toast("That didn't save: " + (e && e.message ? e.message : "try again")); }
 
   // ---------- Render ----------
+  const CITY = { MEL: "Melbourne", SYD: "Sydney", BNE: "Brisbane", ADL: "Adelaide", PER: "Perth", CBR: "Canberra", OOL: "Gold Coast", HBA: "Hobart", AKL: "Auckland" };
+  const cityName = (code) => CITY[String(code || "").toUpperCase()] || String(code || "");
+  const fromCode = (t) => String(t?.from || "").toUpperCase();
+  const SHARE_BTN = `<button type="button" class="btn primary" data-act="share">Share this trip</button>`;
+
   function render() {
-    renderTrip(); renderFilter(); renderPicks(); renderStale(); renderTable();
-    $("#sortSel").value = S.sort; $("#groupSel").value = S.group; $("#hourVal").value = S.hourValue; $("#hideOut").checked = S.hideOut;
+    renderTop(); renderTripbar(); renderPicks(); renderStale(); renderTable(); renderMore();
+    $("#sortSel").value = ["total", "door", "depart"].includes(S.sort) ? S.sort : "total";
+    $("#hideOut").checked = S.hideOut;
+    document.querySelectorAll("#groupSeg [data-group]").forEach(b => b.setAttribute("aria-pressed", String(S.group === b.dataset.group)));
   }
 
   function flightsUrl(trip, d) {
@@ -470,49 +500,68 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     return "https://www.google.com/travel/flights?q=" + encodeURIComponent(q) + "&curr=AUD&hl=en";
   }
 
-  function renderTrip() {
-    const t = currentTrip(); const el = $("#trip");
-    if (!t) {
-      el.innerHTML = `<div class="trip-top"><div class="trip-title"><span class="eyebrow">Trip Picker</span><h1>No trip yet</h1></div>
-        <div class="trip-actions"><button class="btn primary" data-act="new-trip">Start a trip</button></div></div>`;
-      return;
-    }
+  // Start airports that have flights saved in this trip, Melbourne and Sydney first
+  function startAirports(t) {
+    const set = new Set(tripOptions().map(o => String(o.depAirport || t.from || "").toUpperCase()).filter(Boolean));
+    if (t.from) set.add(fromCode(t));
+    const order = ["MEL", "SYD"]; const rank = (a) => { const i = order.indexOf(a); return i < 0 ? 99 : i; };
+    return [...set].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  }
+  function fromOptions() { const t = currentTrip(); const f = fromCode(t); return tripOptions().filter(o => String(o.depAirport || f).toUpperCase() === f); }
+
+  function renderTop() {
+    const t = currentTrip(); const el = $("#top");
+    const tripSel = S.trips.length > 1 ? `<label class="trip-pick" for="tripSel">Trip <select class="trip-select" id="tripSel">${S.trips.map(x => `<option value="${esc(x.id)}" ${t && x.id === t.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>` : "";
+    el.innerHTML = `<div class="top-title"><span class="eyebrow">Trip Picker · one-way trips compared door to door</span><h1>${t ? esc(t.name) : "No trip yet"}</h1></div>
+      <div class="top-actions">${S.searching ? `<span class="q-note busy">Searching live flights…</span>` : ""}${tripSel}${t ? SHARE_BTN : `<button class="btn primary" data-act="new-trip">Start a trip</button>`}</div>`;
+  }
+
+  function renderTripbar() {
+    const t = currentTrip(); const el = $("#tripbar");
+    if (!t) { el.hidden = true; el.innerHTML = ""; return; }
+    el.hidden = false;
     const dt = t.date ? new Date(t.date + "T00:00") : null;
-    const tripOpts = S.trips.length > 1 ? `<select class="trip-select" id="tripSel" aria-label="Choose trip">${S.trips.map(x => `<option value="${esc(x.id)}" ${x.id === t.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : "";
+    const dests = (t.destinations || []).map(d => d.name);
+    if (S.filter !== "all" && !dests.includes(S.filter)) S.filter = "all";
     el.innerHTML = `
-      <div class="trip-top">
-        <div class="trip-title">
-          <span class="eyebrow">Trip Picker · one way</span>
-          <h1><input class="inline-name" id="q_name" value="${esc(t.name)}" aria-label="Trip name" title="Click to rename"></h1>
-          <div class="quick">
-            <label class="q"><span>From</span><input id="q_from" value="${esc(t.from || "MEL")}" size="6" maxlength="20"></label>
-            <label class="q"><span>Leaving</span><input id="q_date" type="date" value="${esc(t.date || "")}"></label>
-            <div class="q"><span id="q_paxLabel">Travellers</span>
-              <div class="stepper" role="group" aria-labelledby="q_paxLabel">
-                <button type="button" data-act="pax-down" aria-label="One fewer traveller">−</button>
-                <output id="q_pax">${num(t.travellers, 1)}</output>
-                <button type="button" data-act="pax-up" aria-label="One more traveller">+</button>
-              </div>
-            </div>
-            <span class="q-note ${S.searching ? "busy" : ""}">${S.searching ? "Searching live flights…" : `${tripOptions().length} options saved${dt ? "" : " · set a date to search flights"}`}</span>
-          </div>
-        </div>
-        <div class="trip-actions">
-          ${tripOpts}
-          <button class="btn" data-act="edit-trip">Edit destinations</button>
-          <button class="btn" data-act="new-trip">New trip</button>
-          ${FLIGHTS_API ? `<button class="btn" data-act="live-search" ${S.searching ? "disabled" : ""}>Search live flights</button>` : ""}
-          <button class="btn" data-act="share">Copy share link</button>
-          <button class="btn primary" data-act="add">Add option</button>
-        </div>
+      <div class="tb-field"><span class="tb-label" id="lbl-from">Leaving from</span>
+        <div class="seg" role="group" aria-labelledby="lbl-from">
+          ${startAirports(t).map(p => `<button type="button" data-from="${esc(p)}" aria-pressed="${p === fromCode(t)}">${esc(cityName(p))}</button>`).join("")}
+          <button type="button" class="wip" disabled title="Searching from any city is being built">Other city <span class="wip-tag">WIP</span></button>
+        </div></div>
+      <div class="tb-field"><span class="tb-label">Date</span>
+        <div class="tb-static">${dt ? dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Not set"}<span class="wip-tag" title="Searching other dates is being built">Other dates WIP</span></div></div>
+      <div class="tb-field"><span class="tb-label" id="lbl-pax">Travellers</span>
+        <div class="stepper" role="group" aria-labelledby="lbl-pax">
+          <button type="button" data-act="pax-down" aria-label="One fewer traveller">−</button>
+          <output id="q_pax">${num(t.travellers, 1)}</output>
+          <button type="button" data-act="pax-up" aria-label="One more traveller">+</button>
+        </div></div>
+      <div class="tb-field"><span class="tb-label" id="lbl-dest">Going to</span>
+        <div class="seg" role="group" aria-labelledby="lbl-dest">${["all", ...dests].map(n => `<button type="button" data-filter="${esc(n)}" aria-pressed="${S.filter === n}">${n === "all" ? (dests.length === 2 ? "Both" : "All") : esc(n)}</button>`).join("")}</div></div>`;
+  }
+
+  function renderMore() {
+    const t = currentTrip(); const el = $("#more");
+    if (!t) { el.innerHTML = ""; return; }
+    el.innerHTML = `
+      <div class="more-block">
+        <div class="more-head"><h2>From the airport to where you're staying</h2><button type="button" class="btn small" data-act="edit-trip">Edit</button></div>
+        <ul class="transfers">${(t.destinations || []).map(d => `<li><b>${esc(d.name)}</b>
+          <span>${esc(d.airport || "?")} airport${num(d.transferMins) ? `, then ${esc(d.transferMethod || "transfer")} · ${dur(num(d.transferMins))} · ${aud(num(d.transferCost))} per person` : ", nothing onward"}</span>
+          <a href="${esc(flightsUrl(t, d))}" target="_blank" rel="noopener">Check today's fares from ${esc(cityName(fromCode(t)))} on Google Flights ↗</a></li>`).join("")}</ul>
       </div>
-      <div class="dests">${(t.destinations || []).map(d => `
-        <div class="dest">
-          <div class="dest-row"><h3>${esc(d.name)}</h3><button type="button" class="btn ghost small" data-act="edit-trip">Edit</button></div>
-          <span class="muted">${esc(d.airport || "?")} airport${num(d.transferMins) ? `, then ${esc(d.transferMethod || "transfer")} · ${dur(num(d.transferMins))} · ${aud(num(d.transferCost))} pp` : ""}</span>
-          <a href="${esc(flightsUrl(t, d))}" target="_blank" rel="noopener">Search flights from ${esc(t.from || "MEL")} to ${esc(d.airport || d.name)} ↗</a>
-        </div>`).join("")}
-        <button type="button" class="dest dest-add" data-act="add-dest">+ Add a destination</button></div>`;
+      <div class="more-block">
+        <div class="more-head"><h2>Change this trip</h2></div>
+        <div class="more-actions">
+          <button type="button" class="btn" data-act="add">Add a flight by hand</button>
+          ${S.sample ? `<button type="button" class="btn" data-act="paste">Paste from a flight search page</button>` : ""}
+          <button type="button" class="btn" data-act="edit-trip">Rename, destinations, transfers</button>
+          <button type="button" class="btn" data-act="new-trip">Start a new trip</button>
+          ${FLIGHTS_API ? `<button type="button" class="btn primary" data-act="live-search" ${S.searching ? "disabled" : ""}>Search live flights</button>` : `<button type="button" class="btn wip" disabled title="Being built">Search live flights <span class="wip-tag">WIP</span></button>`}
+        </div>
+        <p class="hint">New trips start empty. For now, ask Claude to find the flights. Searching live flights for any city and date is being built.</p>
+      </div>`;
   }
 
   function staleRequest() {
@@ -520,28 +569,22 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const dests = (t.destinations || []).map(d => d.name);
     const when = t.date ? new Date(t.date + "T00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "my new date";
     const who = num(t.travellers, 1);
-    return `Find options from ${t.from || "Melbourne"} to ${dests.length > 1 ? dests.slice(0, -1).join(", ") + " or " + dests[dests.length - 1] : (dests[0] || "my destination")} on ${when}, ${who} ${who === 1 ? "person" : "people"}`;
+    return `Find options from ${cityName(t.from) || "Melbourne"} to ${dests.length > 1 ? dests.slice(0, -1).join(", ") + " or " + dests[dests.length - 1] : (dests[0] || "my destination")} on ${when}, ${who} ${who === 1 ? "person" : "people"}`;
   }
   function renderStale() {
-    const el = $("#staleNote"); const n = tripOptions().filter(o => calc(o).stale).length;
+    const el = $("#staleNote"); const n = fromOptions().filter(o => calc(o).stale).length;
     if (!n) { el.hidden = true; el.innerHTML = ""; return; }
     el.hidden = false;
-    el.innerHTML = `<span><b>${n} of ${tripOptions().length} flights are for a different start or date than this trip.</b> They're greyed out and left out of the quick picks. ${FLIGHTS_API ? "Search live flights to get real ones for the new details, or ask Claude" : "To get real flights for the new details, ask Claude"}: <code id="staleReq">${esc(staleRequest())}</code></span>
-      <span class="trip-actions">${FLIGHTS_API ? `<button type="button" class="btn small primary" data-act="live-search" ${S.searching ? "disabled" : ""}>Search live flights</button>` : ""}<button type="button" class="btn small" data-act="copy-req">Copy request</button><button type="button" class="btn small" data-act="hide-stale">${S.hideStale ? "Show old flights" : "Hide old flights"}</button></span>`;
-  }
-
-  function renderFilter() {
-    const t = currentTrip(); const dests = (t?.destinations || []).map(d => d.name);
-    if (S.filter !== "all" && !dests.includes(S.filter)) S.filter = "all";
-    $("#destFilter").innerHTML = ["all", ...dests].map(n => `<button type="button" data-filter="${esc(n)}" aria-pressed="${S.filter === n}">${n === "all" ? "All" : esc(n)}</button>`).join("");
+    el.innerHTML = `<span><b>${n} of ${fromOptions().length} flights are for a different date than this trip.</b> They're greyed out and left out of the quick picks. To get real flights for the new details, ask Claude: <code id="staleReq">${esc(staleRequest())}</code></span>
+      <span class="trip-actions"><button type="button" class="btn small" data-act="copy-req">Copy request</button><button type="button" class="btn small" data-act="hide-stale">${S.hideStale ? "Show old flights" : "Hide old flights"}</button></span>`;
   }
 
   function visibleRows() {
-    let rows = tripOptions().map(o => ({ o, c: calc(o) }));
+    let rows = fromOptions().map(o => ({ o, c: calc(o) }));
     if (S.filter !== "all") rows = rows.filter(r => r.o.dest === S.filter);
     if (S.hideOut) rows = rows.filter(r => r.o.status !== "out");
     if (S.hideStale) rows = rows.filter(r => !r.c.stale);
-    const key = { total: r => r.c.total, door: r => r.c.door + (r.o.overnight ? 600 : 0), value: r => r.c.value, depart: r => r.c.dep ? +r.c.dep : 0, fare: r => num(r.o.fare) }[S.sort] || (r => r.c.total);
+    const key = { total: r => r.c.total, door: r => r.c.door + (r.o.overnight ? 600 : 0), depart: r => r.c.dep ? +r.c.dep : 0, fare: r => num(r.o.fare) }[S.sort] || (r => r.c.total);
     rows.sort((a, b) => (key(a) - key(b)) * S.sortDir);
     return rows;
   }
@@ -549,19 +592,19 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   function bests(rows) {
     const live = rows.filter(r => r.o.status !== "out" && !r.c.stale);
     const min = (f) => live.length ? live.reduce((a, b) => f(b) < f(a) ? b : a) : null;
-    return { cheap: min(r => r.c.total), fast: min(r => r.c.door + (r.o.overnight ? 600 : 0)), value: min(r => r.c.value) };
+    return { cheap: min(r => r.c.total), fast: min(r => r.c.door + (r.o.overnight ? 600 : 0)) };
   }
 
   function renderPicks() {
     const rows = visibleRows(); const b = bests(rows); const el = $("#picks");
-    if (!rows.length) { el.innerHTML = ""; el.hidden = true; return; }
+    if (!b.cheap) { el.innerHTML = ""; el.hidden = true; return; }
     el.hidden = false;
-    const card = (label, r, big, sortKey) => r ? `<button class="pick" type="button" data-sort="${sortKey}">
-        <span class="eyebrow">${label}</span><span class="big">${big}</span>
+    const t = currentTrip(); const pax = Math.max(1, num(t?.travellers, 1));
+    const card = (label, r, big, sortKey) => r ? `<button class="pick" type="button" data-sort="${sortKey}" title="Sort the table this way">
+        <span class="eyebrow">${label} from ${esc(cityName(fromCode(t)))}</span><span class="big">${big}</span>
         <span class="who">${esc(r.o.dest)} · ${esc(r.o.airline)}</span>
-        <span class="sub">${aud(r.c.total)} pp · ${dur(r.c.door)} door to door${r.o.overnight ? " + a night" : ""}</span></button>` : "";
-    el.innerHTML = card("Cheapest", b.cheap, b.cheap && aud(b.cheap.c.total), "total") + card("Fastest", b.fast, b.fast && dur(b.fast.c.door), "door") +
-      card(`Best value at ${aud(S.hourValue)} an hour`, b.value, b.value && aud(b.value.c.value), "value");
+        <span class="sub">${aud(r.c.total)} per person${pax > 1 ? ` (${aud(r.c.total * pax)} for ${pax})` : ""} · ${dur(r.c.door)} door to door${r.o.overnight ? " + a night" : ""}</span></button>` : "";
+    el.innerHTML = card("Cheapest", b.cheap, aud(b.cheap.c.total), "total") + card("Fastest", b.fast, dur(b.fast.c.door), "door");
   }
 
   function th(label, key, cls = "") {
@@ -572,11 +615,11 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
 
   function renderTable() {
     const tbl = $("#tbl"); const t = currentTrip(); const rows = visibleRows(); const b = bests(rows);
-    $("#foot").textContent = "Your trips are saved in this browser only. Use Copy share link to send a trip to someone: they get their own copy to change. Prices are from Google Flights at the time shown, or what was entered by hand, so check them on the booking site before paying.";
+    $("#foot").textContent = "Your trips are saved in this browser only. Use Share this trip to send a trip to someone: they get their own copy to change. Prices are from Google Flights at the time shown, or what was entered by hand, so check them on the booking site before paying.";
     if (!t || !rows.length) {
-      tbl.innerHTML = `<tbody><tr><td><div class="empty"><h2>${t ? (tripOptions().length ? "Nothing matches these filters" : "No options yet") : "Start by setting up a trip"}</h2>
+      tbl.innerHTML = `<tbody><tr><td><div class="empty"><h2>${t ? (fromOptions().length ? "Nothing matches these filters" : `No flights from ${esc(cityName(fromCode(t)))} saved yet`) : "Start by setting up a trip"}</h2>
         <p>${t ? "Each option is one way of getting there: a flight plus any train, bus or car at the other end." : "A trip holds where you're flying from, the date, and the places you're choosing between."}</p>
-        ${t ? `<button class="btn primary" data-act="add">Add option</button>` : `<button class="btn primary" data-act="new-trip">Start a trip</button>`}</div></td></tr></tbody>`;
+        ${t ? `<p class="hint">Ask Claude to find them, or add one by hand. Live search is being built.</p><button class="btn primary" data-act="add">Add a flight by hand</button>` : `<button class="btn primary" data-act="new-trip">Start a trip</button>`}</div></td></tr></tbody>`;
       return;
     }
     const maxDoor = Math.max(...rows.map(r => r.c.door), 1);
@@ -584,13 +627,13 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const head = `<thead>
       <tr class="group"><th></th><th colspan="3" class="span">Flight</th><th class="span">Ground</th><th></th><th colspan="4" class="span">Cost per person${pax > 1 ? ` · last column for ${pax}` : ""}</th><th></th></tr>
       <tr>${th("Option", "fare")}${th("Leaves", "depart")}<th>Lands</th><th class="c-ft">Flight time</th><th class="c-on">Airport onward</th>${th("Door to door", "door")}
-        <th class="num c-fare">Fare</th><th class="num c-ext">Transfer + bags</th>${th("Total", "total", "num")}${th(pax > 1 ? `For ${pax}` : "Value", pax > 1 ? "total" : "value", "num")}<th class="num">Status</th></tr></thead>`;
+        <th class="num c-fare">Fare</th><th class="num c-ext">Transfer + bags</th>${th("Total", "total", "num")}${th(`For ${pax}`, "total", "num")}<th class="num">Status</th></tr></thead>`;
 
     const rowHtml = (r) => {
       const o = r.o, c = r.c; const tags = [];
       if (b.cheap === r) tags.push(["good", "Cheapest"]);
       if (b.fast === r) tags.push(["accent", "Fastest"]);
-      if (b.value === r && b.value !== b.cheap) tags.push(["good", "Best value"]);
+      if (o.status === "shortlist") tags.push(["accent", "Shortlisted"]);
       if (o.status === "booked") tags.push(["good", "Booked"]);
       const chips = [...tags, ...c.flags].map(([k, v]) => `<span class="chip ${k}">${esc(v)}</span>`).join("");
       const plus = dayDiff(c.dep, c.arr);
@@ -618,7 +661,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
         <td class="num c-fare" data-label="Fare"><span class="money">${aud(num(o.fare))}</span></td>
         <td class="num c-ext" data-label="Transfer + bags"><div class="cell-stack"><span class="money">${aud(c.extras)}</span><span class="money-sub">${extrasSub}</span></div></td>
         <td class="num" data-label="Total pp"><div class="cell-stack"><span class="money total">${aud(c.total)}</span><span class="detail">fare ${aud(num(o.fare))}<br>+ ${aud(c.extras)} ${c.bagsIncl ? "transfer" : (c.bags == null ? "transfer, bags extra" : "transfer and bags")}</span></div></td>
-        <td class="num" data-label="${pax > 1 ? `For ${pax}` : "Value score"}"><div class="cell-stack"><span class="money">${aud(pax > 1 ? c.total * pax : c.value)}</span></div></td>
+        <td class="num" data-label="For ${pax}"><div class="cell-stack"><span class="money">${aud(c.total * pax)}</span></div></td>
         <td class="c-act num"><div class="row-actions">
           <select class="status-sel" data-act="status" aria-label="Status">
             <option value="" ${!o.status ? "selected" : ""}>Considering</option>
@@ -626,7 +669,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
             <option value="booked" ${o.status === "booked" ? "selected" : ""}>Booked</option>
             <option value="out" ${o.status === "out" ? "selected" : ""}>Ruled out</option>
           </select>
-          <a class="btn ghost small" href="${esc(bookHref)}" target="_blank" rel="noopener">Book ↗</a>
+          <a class="btn ghost small" href="${esc(bookHref)}" target="_blank" rel="noopener" title="${o.link ? "Open the booking page" : "Search this route on Google Flights"}">Find fare ↗</a>
           <button type="button" class="btn ghost small" data-act="edit">Edit</button>
         </div></td>
       </tr>`;
@@ -671,7 +714,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       $("#o_tCost").value = num(o.transferCost); $("#o_buffer").value = num(o.bufferMins, 60); $("#o_overnight").checked = !!o.overnight;
       $("#o_link").value = o.link || ""; $("#o_notes").value = o.notes || "";
     } else {
-      $("#o_depart").value = (t.date || "") + (t.date ? "T08:00" : ""); $("#o_buffer").value = 60; fillTransfer(dest);
+      $("#o_depart").value = (t.date || "") + (t.date ? "T08:00" : ""); $("#o_buffer").value = 60; $("#o_depAirport").value = fromCode(t); fillTransfer(dest);
     }
     $("#optDlg").showModal();
   }
@@ -719,7 +762,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     editingTrip = t; $("#tripForm").reset();
     $("#tripTitle").textContent = t ? "Trip details" : "Start a trip";
     $("#t_delete").hidden = !t || S.trips.length < 2;
-    $("#t_name").value = t?.name || ""; $("#t_from").value = t?.from || "MEL"; $("#t_date").value = t?.date || ""; $("#t_pax").value = t?.travellers || 2;
+    $("#t_from").closest("label").hidden = !!t; $("#t_date").closest("label").hidden = !!t; $("#t_name").value = t?.name || ""; $("#t_from").value = t?.from || "MEL"; $("#t_date").value = t?.date || ""; $("#t_pax").value = t?.travellers || 2;
     const box = $("#t_dests"); box.innerHTML = "";
     (t?.destinations?.length ? t.destinations : [{}]).forEach(d => box.appendChild(destRow(d)));
     $("#tripDlg").showModal();
@@ -806,6 +849,8 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const sortBtn = e.target.closest("[data-sort]");
     if (sortBtn) { const k = sortBtn.dataset.sort; if (sortBtn.closest("thead") && S.sort === k) S.sortDir *= -1; else { S.sort = k; S.sortDir = 1; } store.set("sort", S.sort); render(); return; }
     const f = e.target.closest("[data-filter]"); if (f) { S.filter = f.dataset.filter; render(); return; }
+    const fr = e.target.closest("[data-from]"); if (fr) { if (fr.dataset.from !== fromCode(currentTrip())) updateTrip({ from: fr.dataset.from }); return; }
+    const g = e.target.closest("[data-group]"); if (g) { S.group = g.dataset.group; store.set("group", S.group); render(); return; }
     const a = e.target.closest("[data-act]"); if (!a || a.tagName === "SELECT") return;
     const act = a.dataset.act; const row = a.closest("tr[data-id]"); const o = row && S.options.find(x => x.id === row.dataset.id);
     if (act === "add") openOption(null);
@@ -823,21 +868,13 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   document.addEventListener("change", async (e) => {
     const el = e.target;
     if (el.matches('[data-act="status"]')) { const o = S.options.find(x => x.id === el.closest("tr").dataset.id); if (o) { try { await saveDoc("options", o.id, { ...strip(o), status: el.value }); } catch (err) { failed(err); } } }
-    else if (el.id === "q_name") { const v = el.value.trim(); if (v) updateTrip({ name: v }, "Trip renamed"); else render(); }
-    else if (el.id === "q_from" || el.id === "q_date") {
-      const key = el.id === "q_from" ? "from" : "date"; const v = el.value.trim();
-      const oldMsg = `Saved. The flights already listed are still for the old ${key === "from" ? "starting point" : "date"}: ask Claude to research again, or edit them.`;
-      updateTrip({ [key]: v }, FLIGHTS_API ? "" : (tripOptions().length ? oldMsg : "Saved")).then(() => liveSearch(false));
-    }
     else if (el.id === "tripSel") { S.tripId = el.value; store.set("trip", S.tripId); S.filter = "all"; render(); }
     else if (el.id === "sortSel") { S.sort = el.value; S.sortDir = 1; store.set("sort", S.sort); render(); }
-    else if (el.id === "groupSel") { S.group = el.value; store.set("group", S.group); render(); }
     else if (el.id === "hideOut") { S.hideOut = el.checked; store.set("hideOut", S.hideOut); render(); }
-    else if (el.id === "hourVal") { S.hourValue = Math.max(0, num(el.value, 30)); store.set("hour", S.hourValue); render(); }
   });
 
   // ---------- Boot ----------
-  const STARTER = {"trips":[{"name":"Japan ski trip","from":"SYD","date":"2027-02-06","travellers":2,"createdAt":"2026-11-13T00:00:00Z","updatedAt":"2026-11-13T02:00:00Z","destinations":[{"name":"Niseko","airport":"CTS","transferMethod":"airport bus","transferMins":180,"transferCost":65},{"name":"Hakuba","airport":"TYO","transferMethod":"train to Tokyo, bullet train to Nagano, bus","transferMins":290,"transferCost":155}],"id":"japan-ski-2027"}],"options":[{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"Qantas","stops":0,"via":"","depart":"2027-02-06T09:05","arrive":"2027-02-06T17:55","flightMins":650,"fare":1688,"depAirport":"SYD","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","id":"s-n-qf"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"ANA","stops":1,"via":"Tokyo Haneda (1h 40m)","depart":"2027-02-06T21:45","arrive":"2027-02-07T08:30","flightMins":765,"fare":1349,"depAirport":"SYD","notes":"Overnight flight; lands in the morning","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-n-nh"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"JAL","stops":1,"via":"Tokyo Haneda (1h 25m)","depart":"2027-02-06T09:25","arrive":"2027-02-06T20:10","flightMins":765,"fare":1520,"depAirport":"SYD","overnight":true,"notes":"Lands after the last airport bus; stay near the airport","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"link":"","status":"","id":"s-n-jl"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"Cathay Pacific and JAL","stops":2,"via":"Hong Kong (3h 55m), Osaka Kansai (2h 45m)","depart":"2027-02-06T22:20","arrive":"2027-02-07T17:25","flightMins":1265,"fare":916,"depAirport":"SYD","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","id":"s-n-cxjl"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"Jetstar","stops":1,"via":"Osaka Kansai (13h 55m)","depart":"2027-02-06T12:05","arrive":"2027-02-07T11:50","flightMins":1545,"fare":678,"depAirport":"SYD","bagsIncluded":false,"notes":"Very long wait in Osaka","tripId":"japan-ski-2027","bags":null,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-n-jq"},{"dest":"Hakuba","arrAirport":"HND","transferMethod":"Train, bullet train, bus","transferMins":260,"transferCost":130,"airline":"ANA","stops":0,"via":"","depart":"2027-02-06T21:45","arrive":"2027-02-07T05:20","flightMins":575,"fare":1339,"depAirport":"SYD","notes":"Overnight flight; in Hakuba by c. 10 am","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-h-nh"},{"dest":"Hakuba","arrAirport":"HND","transferMethod":"Train, bullet train, bus","transferMins":260,"transferCost":130,"airline":"JAL","stops":0,"via":"","depart":"2027-02-06T09:25","arrive":"2027-02-06T17:10","flightMins":585,"fare":1339,"depAirport":"SYD","overnight":true,"notes":"Lands too late to reach Hakuba the same night (or taxi from Nagano, c. 1 h)","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"link":"","status":"","id":"s-h-jl"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"airline":"Cathay Pacific","stops":1,"via":"Hong Kong (3h 50m)","depart":"2027-02-06T22:20","arrive":"2027-02-07T13:10","flightMins":1010,"fare":774,"depAirport":"SYD","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","id":"s-h-cx-night"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"airline":"Cathay Pacific","stops":1,"via":"Hong Kong (3h 55m)","depart":"2027-02-06T15:15","arrive":"2027-02-07T06:30","flightMins":1035,"fare":774,"depAirport":"SYD","notes":"Overnight flight; in Hakuba by c. noon","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-h-cx-pm"},{"dest":"Hakuba","arrAirport":"HND","transferMethod":"Train, bullet train, bus","transferMins":260,"transferCost":130,"airline":"Cathay Pacific","stops":1,"via":"Hong Kong (1h 30m)","depart":"2027-02-06T08:45","arrive":"2027-02-06T21:15","flightMins":870,"fare":804,"depAirport":"SYD","overnight":true,"notes":"Lands too late to reach Hakuba the same night (or taxi from Nagano, c. 1 h)","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"link":"","status":"","id":"s-h-cx-day"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"airline":"Jetstar","stops":1,"via":"Cairns (3h 25m)","depart":"2027-02-06T06:20","arrive":"2027-02-06T18:10","flightMins":830,"fare":524,"depAirport":"SYD","bagsIncluded":false,"overnight":true,"notes":"Lands too late to reach Hakuba the same night (or taxi from Nagano, c. 1 h)","tripId":"japan-ski-2027","bags":null,"bufferMins":60,"link":"","status":"","id":"s-h-jq"}]};
+  const STARTER = {"trips":[{"name":"Japan ski trip","from":"MEL","date":"2027-02-06","travellers":2,"createdAt":"2026-11-13T00:00:00Z","updatedAt":"2026-11-13T03:00:00Z","destinations":[{"name":"Niseko","airport":"CTS","transferMethod":"airport bus","transferMins":180,"transferCost":65},{"name":"Hakuba","airport":"TYO","transferMethod":"train to Tokyo, bullet train to Nagano, bus","transferMins":290,"transferCost":155}],"starterVersion":2,"id":"japan-ski-2027"}],"options":[{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (2h 20m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T14:05","flightMins":920,"fare":782,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-cx"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"JAL","stops":0,"via":"","depart":"2027-02-06T07:20","arrive":"2027-02-06T15:20","flightMins":600,"fare":1300,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-jl"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Jetstar","stops":1,"via":"Cairns (3h 15m)","depart":"2027-02-06T06:15","arrive":"2027-02-06T18:10","flightMins":835,"fare":526,"bags":null,"bagsIncluded":false,"bufferMins":60,"overnight":true,"link":"","notes":"Lands too late to reach Hakuba the same night","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-jq"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"China Eastern","stops":1,"via":"Shanghai (2h 50m)","depart":"2027-02-06T01:50","arrive":"2027-02-06T15:55","flightMins":965,"fare":572,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-mu"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Qantas","stops":0,"via":"","depart":"2027-02-06T09:20","arrive":"2027-02-06T17:40","flightMins":620,"fare":1540,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":true,"link":"","notes":"Lands too late to reach Hakuba the same night","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-qf"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cebu Pacific","stops":1,"via":"Manila (3h 35m)","depart":"2027-02-06T01:35","arrive":"2027-02-06T16:50","flightMins":1035,"fare":771,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-cebu"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (2h 25m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T14:50","flightMins":965,"fare":1780,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-cx-fast"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (5h 35m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T17:50","flightMins":1145,"fare":940,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-cx"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Jetstar","stops":2,"via":"Cairns (3h 15m), Tokyo Narita (12h 50m)","depart":"2027-02-06T06:15","arrive":"2027-02-07T08:40","flightMins":1705,"fare":637,"bags":null,"bagsIncluded":false,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-jq"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Qantas","stops":1,"via":"Sydney (1h 35m)","depart":"2027-02-06T06:00","arrive":"2027-02-06T17:55","flightMins":835,"fare":1730,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-qf"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"Qantas","stops":0,"via":"","depart":"2027-02-06T09:05","arrive":"2027-02-06T17:55","flightMins":650,"fare":1688,"depAirport":"SYD","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","id":"s-n-qf"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"ANA","stops":1,"via":"Tokyo Haneda (1h 40m)","depart":"2027-02-06T21:45","arrive":"2027-02-07T08:30","flightMins":765,"fare":1349,"depAirport":"SYD","notes":"Overnight flight; lands in the morning","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-n-nh"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"JAL","stops":1,"via":"Tokyo Haneda (1h 25m)","depart":"2027-02-06T09:25","arrive":"2027-02-06T20:10","flightMins":765,"fare":1520,"depAirport":"SYD","overnight":true,"notes":"Lands after the last airport bus; stay near the airport","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"link":"","status":"","id":"s-n-jl"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"Cathay Pacific and JAL","stops":2,"via":"Hong Kong (3h 55m), Osaka Kansai (2h 45m)","depart":"2027-02-06T22:20","arrive":"2027-02-07T17:25","flightMins":1265,"fare":916,"depAirport":"SYD","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","id":"s-n-cxjl"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"airline":"Jetstar","stops":1,"via":"Osaka Kansai (13h 55m)","depart":"2027-02-06T12:05","arrive":"2027-02-07T11:50","flightMins":1545,"fare":678,"depAirport":"SYD","bagsIncluded":false,"notes":"Very long wait in Osaka","tripId":"japan-ski-2027","bags":null,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-n-jq"},{"dest":"Hakuba","arrAirport":"HND","transferMethod":"Train, bullet train, bus","transferMins":260,"transferCost":130,"airline":"ANA","stops":0,"via":"","depart":"2027-02-06T21:45","arrive":"2027-02-07T05:20","flightMins":575,"fare":1339,"depAirport":"SYD","notes":"Overnight flight; in Hakuba by c. 10 am","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-h-nh"},{"dest":"Hakuba","arrAirport":"HND","transferMethod":"Train, bullet train, bus","transferMins":260,"transferCost":130,"airline":"JAL","stops":0,"via":"","depart":"2027-02-06T09:25","arrive":"2027-02-06T17:10","flightMins":585,"fare":1339,"depAirport":"SYD","overnight":true,"notes":"Lands too late to reach Hakuba the same night (or taxi from Nagano, c. 1 h)","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"link":"","status":"","id":"s-h-jl"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"airline":"Cathay Pacific","stops":1,"via":"Hong Kong (3h 50m)","depart":"2027-02-06T22:20","arrive":"2027-02-07T13:10","flightMins":1010,"fare":774,"depAirport":"SYD","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","id":"s-h-cx-night"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"airline":"Cathay Pacific","stops":1,"via":"Hong Kong (3h 55m)","depart":"2027-02-06T15:15","arrive":"2027-02-07T06:30","flightMins":1035,"fare":774,"depAirport":"SYD","notes":"Overnight flight; in Hakuba by c. noon","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","status":"","id":"s-h-cx-pm"},{"dest":"Hakuba","arrAirport":"HND","transferMethod":"Train, bullet train, bus","transferMins":260,"transferCost":130,"airline":"Cathay Pacific","stops":1,"via":"Hong Kong (1h 30m)","depart":"2027-02-06T08:45","arrive":"2027-02-06T21:15","flightMins":870,"fare":804,"depAirport":"SYD","overnight":true,"notes":"Lands too late to reach Hakuba the same night (or taxi from Nagano, c. 1 h)","tripId":"japan-ski-2027","bags":null,"bagsIncluded":true,"bufferMins":60,"link":"","status":"","id":"s-h-cx-day"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"airline":"Jetstar","stops":1,"via":"Cairns (3h 25m)","depart":"2027-02-06T06:20","arrive":"2027-02-06T18:10","flightMins":830,"fare":524,"depAirport":"SYD","bagsIncluded":false,"overnight":true,"notes":"Lands too late to reach Hakuba the same night (or taxi from Nagano, c. 1 h)","tripId":"japan-ski-2027","bags":null,"bufferMins":60,"link":"","status":"","id":"s-h-jq"}]};
   const banner = (msg) => { const b = $("#banner"); b.textContent = msg; b.hidden = !msg; };
   function persist() { store.set("data", { trips: S.trips, options: S.options }); }
 
@@ -891,6 +928,15 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   const saved = store.get("data", null);
   if (saved && Array.isArray(saved.trips) && saved.trips.length) { S.trips = saved.trips; S.options = saved.options || []; }
   else { S.trips = STARTER.trips.map(x => ({ ...x })); S.options = STARTER.options.map(x => ({ ...x })); }
+  // Returning visitors: refresh the example trip when the site ships newer flights, keeping their own settings
+  STARTER.trips.forEach(st => {
+    const i = S.trips.findIndex(x => x.id === st.id);
+    if (i < 0 || num(S.trips[i].starterVersion, 1) >= num(st.starterVersion, 1)) return;
+    const keep = Object.fromEntries(S.options.filter(o => o.tripId === st.id).map(o => [o.id, o.status || ""]));
+    S.options = S.options.filter(o => o.tripId !== st.id).concat(STARTER.options.filter(o => o.tripId === st.id).map(o => ({ ...o, status: keep[o.id] || o.status || "" })));
+    S.trips[i] = { ...st, travellers: S.trips[i].travellers ?? st.travellers };
+    persist();
+  });
   render();
   loadShared().then(changed => { if (changed) render(); });
   window.addEventListener("hashchange", () => loadShared().then(c => { if (c) render(); }));
