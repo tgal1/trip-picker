@@ -105,6 +105,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .stepper button:hover { background: var(--accent-soft); }
 .stepper output { min-width: 28px; text-align: center; font-weight: 600; font-family: var(--f-mono); }
 .q-note { color: var(--muted); font-size: 13px; padding-bottom: 7px; }
+.q-note.busy { color: var(--accent); font-weight: 600; }
 
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
@@ -363,8 +364,13 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
 
 <script>
 (() => {
+  // ---------- Live flight search ----------
+  // Address of the Cloudflare Worker that holds the SerpApi key (see worker/README.md). Empty turns live search off.
+  const FLIGHTS_API = "";
+
   // ---------- State ----------
   const S = {
+    searching: false, searchSeq: 0,
     db: null, sample: null, live: false,
     trips: [], options: [],
     tripId: null,
@@ -488,13 +494,14 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
                 <button type="button" data-act="pax-up" aria-label="One more traveller">+</button>
               </div>
             </div>
-            <span class="q-note">${tripOptions().length} options saved${dt ? "" : " · set a date to search flights"}</span>
+            <span class="q-note ${S.searching ? "busy" : ""}">${S.searching ? "Searching live flights…" : `${tripOptions().length} options saved${dt ? "" : " · set a date to search flights"}`}</span>
           </div>
         </div>
         <div class="trip-actions">
           ${tripOpts}
           <button class="btn" data-act="edit-trip">Edit destinations</button>
           <button class="btn" data-act="new-trip">New trip</button>
+          ${FLIGHTS_API ? `<button class="btn" data-act="live-search" ${S.searching ? "disabled" : ""}>Search live flights</button>` : ""}
           <button class="btn" data-act="share">Copy share link</button>
           <button class="btn primary" data-act="add">Add option</button>
         </div>
@@ -519,8 +526,8 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const el = $("#staleNote"); const n = tripOptions().filter(o => calc(o).stale).length;
     if (!n) { el.hidden = true; el.innerHTML = ""; return; }
     el.hidden = false;
-    el.innerHTML = `<span><b>${n} of ${tripOptions().length} flights are for a different start or date than this trip.</b> They're greyed out and left out of the quick picks. To get real flights for the new details, ask Claude: <code id="staleReq">${esc(staleRequest())}</code></span>
-      <span class="trip-actions"><button type="button" class="btn small" data-act="copy-req">Copy request</button><button type="button" class="btn small" data-act="hide-stale">${S.hideStale ? "Show old flights" : "Hide old flights"}</button></span>`;
+    el.innerHTML = `<span><b>${n} of ${tripOptions().length} flights are for a different start or date than this trip.</b> They're greyed out and left out of the quick picks. ${FLIGHTS_API ? "Search live flights to get real ones for the new details, or ask Claude" : "To get real flights for the new details, ask Claude"}: <code id="staleReq">${esc(staleRequest())}</code></span>
+      <span class="trip-actions">${FLIGHTS_API ? `<button type="button" class="btn small primary" data-act="live-search" ${S.searching ? "disabled" : ""}>Search live flights</button>` : ""}<button type="button" class="btn small" data-act="copy-req">Copy request</button><button type="button" class="btn small" data-act="hide-stale">${S.hideStale ? "Show old flights" : "Hide old flights"}</button></span>`;
   }
 
   function renderFilter() {
@@ -565,7 +572,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
 
   function renderTable() {
     const tbl = $("#tbl"); const t = currentTrip(); const rows = visibleRows(); const b = bests(rows);
-    $("#foot").textContent = "Your trips are saved in this browser only. Use Copy share link to send a trip to someone: they get their own copy to change. Prices are what was entered, so check them on the booking site before paying.";
+    $("#foot").textContent = "Your trips are saved in this browser only. Use Copy share link to send a trip to someone: they get their own copy to change. Prices are from Google Flights at the time shown, or what was entered by hand, so check them on the booking site before paying.";
     if (!t || !rows.length) {
       tbl.innerHTML = `<tbody><tr><td><div class="empty"><h2>${t ? (tripOptions().length ? "Nothing matches these filters" : "No options yet") : "Start by setting up a trip"}</h2>
         <p>${t ? "Each option is one way of getting there: a flight plus any train, bus or car at the other end." : "A trip holds where you're flying from, the date, and the places you're choosing between."}</p>
@@ -632,7 +639,9 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       for (const g of groups) {
         const gr = rows.filter(r => r.o.dest === g); if (!gr.length) continue;
         const d = (t.destinations || []).find(x => x.name === g);
-        body += `<tr class="dest-head"><td colspan="11">${esc(g)} <span class="muted">· fly into ${esc(d?.airport || gr[0].o.arrAirport || "")}${d && num(d.transferMins) ? `, then ${esc(d.transferMethod || "transfer")}` : ""} · ${gr.length} option${gr.length > 1 ? "s" : ""}</span></td></tr>`;
+        const checked = gr.map(r => r.o.checkedAt).filter(Boolean).sort().pop();
+        const checkedTxt = checked ? ` · Google Flights prices checked ${fmtTime(new Date(checked))} ${fmtDate(new Date(checked))}` : "";
+        body += `<tr class="dest-head"><td colspan="11">${esc(g)} <span class="muted">· fly into ${esc(d?.airport || gr[0].o.arrAirport || "")}${d && num(d.transferMins) ? `, then ${esc(d.transferMethod || "transfer")}` : ""} · ${gr.length} option${gr.length > 1 ? "s" : ""}${checkedTxt}</span></td></tr>`;
         body += gr.map(rowHtml).join("");
       }
     } else body = rows.map(rowHtml).join("");
@@ -725,7 +734,9 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     }).filter(d => d.name);
     const id = editingTrip?.id || uid();
     const data = { name, from: $("#t_from").value.trim() || "MEL", date: $("#t_date").value, travellers: Math.max(1, num($("#t_pax").value, 1)), destinations, updatedAt: new Date().toISOString(), createdAt: editingTrip?.createdAt || new Date().toISOString() };
-    try { await saveDoc("trips", id, data); S.tripId = id; store.set("trip", id); $("#tripDlg").close(); toast("Trip saved"); render(); } catch (err) { failed(err); }
+    const before = editingTrip ? JSON.stringify([editingTrip.from, editingTrip.date, (editingTrip.destinations || []).map(d => d.name + d.airport)]) : "";
+    const after = JSON.stringify([data.from, data.date, destinations.map(d => d.name + d.airport)]);
+    try { await saveDoc("trips", id, data); S.tripId = id; store.set("trip", id); $("#tripDlg").close(); toast("Trip saved"); render(); if (before !== after) liveSearch(false); } catch (err) { failed(err); }
   });
   $("#t_delete").addEventListener("click", async () => {
     const b = $("#t_delete");
@@ -735,6 +746,59 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       await deleteDoc("trips", editingTrip.id); S.tripId = null; $("#tripDlg").close(); toast("Trip deleted"); render();
     } catch (err) { failed(err); }
   });
+
+  // ---------- Live search ----------
+  // Asks the Worker for each destination, then swaps that destination's earlier live results for the new ones.
+  // Options added by hand or by Claude are kept (and greyed out if they no longer match the trip).
+  async function liveSearch(asked) {
+    const t = currentTrip(); if (!FLIGHTS_API || !t) return;
+    const from = String(t.from || "").trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(from)) { if (asked || t.from) toast("Live search needs a three-letter airport code to start from, such as MEL."); return; }
+    if (!t.date) { if (asked) toast("Set a date to search flights."); return; }
+    const dests = (t.destinations || []).filter(d => /^[A-Z]{3}$/.test(String(d.airport || "").toUpperCase()));
+    if (!dests.length) { if (asked) toast("Give each destination a three-letter airport code to search."); return; }
+    const seq = ++S.searchSeq; S.searching = true; render();
+    const results = await Promise.all(dests.map(d =>
+      fetch(`${FLIGHTS_API}/search?from=${from}&to=${encodeURIComponent(d.airport.toUpperCase())}&date=${t.date}`)
+        .then(r => r.json().catch(() => ({ error: "bad", message: "The flight search sent back something unreadable." })))
+        .catch(() => ({ error: "network", message: "Couldn't reach the flight search. Check your connection." }))
+        .then(res => ({ d, res }))));
+    if (seq !== S.searchSeq) return; // a newer search has started
+    S.searching = false;
+    const now = currentTrip(); if (!now || now.id !== t.id || now.from !== t.from || now.date !== t.date) { render(); return; }
+    let added = 0, empty = [], errors = [], left = null;
+    for (const { d, res } of results) {
+      if (!res || res.error || !Array.isArray(res.flights)) { errors.push(res?.message || "Search failed"); continue; }
+      if (res.searchesLeftToday != null) left = res.searchesLeftToday;
+      const previous = S.options.filter(o => o.tripId === t.id && o.dest === d.name && o.source === "live");
+      const keyOf = (o) => [o.airline, o.depart, o.arrAirport].join("|");
+      const kept = new Map(previous.map(o => [keyOf(o), o]));
+      S.options = S.options.filter(o => !previous.includes(o));
+      if (!res.flights.length) empty.push(d.name);
+      for (const f of res.flights) {
+        const old = kept.get(keyOf(f));
+        S.options.push({
+          dest: d.name, tripId: t.id, source: "live", checkedAt: res.checkedAt,
+          airline: f.airline, stops: f.stops, via: f.via, depAirport: f.depAirport, arrAirport: f.arrAirport,
+          depart: f.depart, arrive: f.arrive, flightMins: f.flightMins, fare: f.fare,
+          bagsIncluded: !!f.bagsIncluded, bags: null,
+          transferMethod: d.transferMethod || "", transferMins: num(d.transferMins), transferCost: num(d.transferCost),
+          bufferMins: 60, overnight: old ? !!old.overnight : false, link: res.searchUrl || "",
+          notes: [f.flightNumbers, f.notes].filter(Boolean).join(". "), status: old ? old.status || "" : "",
+          id: old ? old.id : uid()
+        });
+        added++;
+      }
+    }
+    persist(); render();
+    const parts = [];
+    if (added) parts.push(`Found ${added} live flight${added > 1 ? "s" : ""}`);
+    if (empty.length) parts.push(`no flights found to ${empty.join(" or ")}`);
+    if (errors.length) parts.push(errors[0]);
+    if (left != null && !errors.length) parts.push(`${left} new search${left === 1 ? "" : "es"} left today`);
+    const msg = parts.join(". ").replace(/^./, c => c.toUpperCase()) + ".";
+    toast(msg);
+  }
 
   // ---------- Events ----------
   document.addEventListener("click", async (e) => {
@@ -753,6 +817,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     else if (act === "pax-up" || act === "pax-down") { const t = currentTrip(); if (t) { const n = Math.max(1, num(t.travellers, 1) + (act === "pax-up" ? 1 : -1)); if (n !== num(t.travellers, 1)) updateTrip({ travellers: n }); } }
     else if (act === "new-trip") openTrip(null);
     else if (act === "share") shareTrip();
+    else if (act === "live-search") liveSearch(true);
     else if (act === "star" && o) { try { await saveDoc("options", o.id, { ...strip(o), status: o.status === "shortlist" ? "" : "shortlist" }); } catch (err) { failed(err); } }
   });
   document.addEventListener("change", async (e) => {
@@ -761,7 +826,8 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     else if (el.id === "q_name") { const v = el.value.trim(); if (v) updateTrip({ name: v }, "Trip renamed"); else render(); }
     else if (el.id === "q_from" || el.id === "q_date") {
       const key = el.id === "q_from" ? "from" : "date"; const v = el.value.trim();
-      updateTrip({ [key]: v }, tripOptions().length ? `Saved. The flights already listed are still for the old ${key === "from" ? "starting point" : "date"}: ask Claude to research again, or edit them.` : "Saved");
+      const oldMsg = `Saved. The flights already listed are still for the old ${key === "from" ? "starting point" : "date"}: ask Claude to research again, or edit them.`;
+      updateTrip({ [key]: v }, FLIGHTS_API ? "" : (tripOptions().length ? oldMsg : "Saved")).then(() => liveSearch(false));
     }
     else if (el.id === "tripSel") { S.tripId = el.value; store.set("trip", S.tripId); S.filter = "all"; render(); }
     else if (el.id === "sortSel") { S.sort = el.value; S.sortDir = 1; store.set("sort", S.sort); render(); }
