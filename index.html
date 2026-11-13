@@ -166,6 +166,11 @@ tbody tr.booked td:first-child { box-shadow: inset 3px 0 0 var(--good); }
 .chip { font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .chip.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .chip.good { background: var(--good-soft); border-color: transparent; color: var(--good); font-weight: 600; }
+.chip.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); border-color: transparent; color: var(--bad); font-weight: 600; }
+tbody tr.stale td { opacity: .55; }
+.stale-note { border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); background: var(--surface); border-radius: 10px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+.stale-note b { color: var(--bad); }
+.stale-note code { font-family: var(--f-mono); font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
 .chip.accent { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
 .money { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .money.total { font-weight: 600; font-size: 15.5px; }
@@ -264,6 +269,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       <label for="hourVal" title="Used for Best value: each hour of travel counts as this many dollars">An hour of travel is worth A$ <input type="number" id="hourVal" min="0" step="5"></label>
     </div>
   </div>
+  <div id="staleNote" class="stale-note" hidden></div>
   <section class="table-card" aria-label="Options">
     <div class="table-scroll"><table id="tbl"></table></div>
     <div class="legend">
@@ -286,6 +292,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
           <label class="field"><span>Destination</span><select id="o_dest" required></select></label>
           <label class="field"><span>Airline(s)</span><input id="o_airline" placeholder="Cathay Pacific" required></label>
           <label class="field"><span>Stops</span><input id="o_stops" type="number" min="0" max="5" value="1"></label>
+          <label class="field"><span>Leaves from (airport code)</span><input id="o_depAirport" placeholder="MEL" maxlength="4"></label>
           <label class="field"><span>Lands at (airport code)</span><input id="o_arrAirport" placeholder="ZQN" maxlength="4"></label>
         </div>
         <label class="field"><span>Stops and layovers</span><input id="o_via" placeholder="Hong Kong (2h 20m)"></label>
@@ -404,9 +411,15 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     if (dep && dep.getHours() < 5) { const prev = new Date(dep); prev.setDate(prev.getDate() - 1); flags.push(["warn", `At the airport the night of ${fmtDate(prev)}`]); }
     if (!bagsIncl && bags == null) flags.push(["warn", "Checked bags not included"]);
     if (!bagsIncl && bags != null && bags > 0) flags.push(["", `Bags +${aud(bags)} added`]);
+    const depAirport = String(o.depAirport || trip?.from || "").toUpperCase();
+    const tripFrom = String(trip?.from || "").toUpperCase();
+    const stale = [];
+    if (o.depAirport && tripFrom && depAirport !== tripFrom) stale.push(`Leaves ${depAirport}, not ${tripFrom}`);
+    if (trip?.date && o.depart && o.depart.slice(0, 10) !== trip.date) stale.push(`Flies ${fmtDate(dep)}, not ${fmtDate(new Date(trip.date + "T00:00"))}`);
+    stale.reverse().forEach(m => flags.unshift(["bad", m]));
     if (o.overnight) flags.push(["warn", "Night's stay needed on the way"]);
     else if (arr && arr.getHours() >= 17) flags.push(["", "Lands after 5 pm: check the last bus"]);
-    return { bags, bagsIncl, extras, transferCost, total, buffer, door, dep, arr, pax, value, flags };
+    return { bags, bagsIncl, extras, transferCost, total, buffer, door, dep, arr, pax, value, flags, depAirport, stale: stale.length > 0 };
   }
 
   // ---------- Data access ----------
@@ -442,7 +455,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
 
   // ---------- Render ----------
   function render() {
-    renderTrip(); renderFilter(); renderPicks(); renderTable();
+    renderTrip(); renderFilter(); renderPicks(); renderStale(); renderTable();
     $("#sortSel").value = S.sort; $("#groupSel").value = S.group; $("#hourVal").value = S.hourValue; $("#hideOut").checked = S.hideOut;
   }
 
@@ -495,6 +508,21 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
         <button type="button" class="dest dest-add" data-act="add-dest">+ Add a destination</button></div>`;
   }
 
+  function staleRequest() {
+    const t = currentTrip(); if (!t) return "";
+    const dests = (t.destinations || []).map(d => d.name);
+    const when = t.date ? new Date(t.date + "T00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "my new date";
+    const who = num(t.travellers, 1);
+    return `Find options from ${t.from || "Melbourne"} to ${dests.length > 1 ? dests.slice(0, -1).join(", ") + " or " + dests[dests.length - 1] : (dests[0] || "my destination")} on ${when}, ${who} ${who === 1 ? "person" : "people"}`;
+  }
+  function renderStale() {
+    const el = $("#staleNote"); const n = tripOptions().filter(o => calc(o).stale).length;
+    if (!n) { el.hidden = true; el.innerHTML = ""; return; }
+    el.hidden = false;
+    el.innerHTML = `<span><b>${n} of ${tripOptions().length} flights are for a different start or date than this trip.</b> They're greyed out and left out of the quick picks. To get real flights for the new details, ask Claude: <code id="staleReq">${esc(staleRequest())}</code></span>
+      <span class="trip-actions"><button type="button" class="btn small" data-act="copy-req">Copy request</button><button type="button" class="btn small" data-act="hide-stale">${S.hideStale ? "Show old flights" : "Hide old flights"}</button></span>`;
+  }
+
   function renderFilter() {
     const t = currentTrip(); const dests = (t?.destinations || []).map(d => d.name);
     if (S.filter !== "all" && !dests.includes(S.filter)) S.filter = "all";
@@ -505,13 +533,14 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     let rows = tripOptions().map(o => ({ o, c: calc(o) }));
     if (S.filter !== "all") rows = rows.filter(r => r.o.dest === S.filter);
     if (S.hideOut) rows = rows.filter(r => r.o.status !== "out");
+    if (S.hideStale) rows = rows.filter(r => !r.c.stale);
     const key = { total: r => r.c.total, door: r => r.c.door + (r.o.overnight ? 600 : 0), value: r => r.c.value, depart: r => r.c.dep ? +r.c.dep : 0, fare: r => num(r.o.fare) }[S.sort] || (r => r.c.total);
     rows.sort((a, b) => (key(a) - key(b)) * S.sortDir);
     return rows;
   }
 
   function bests(rows) {
-    const live = rows.filter(r => r.o.status !== "out");
+    const live = rows.filter(r => r.o.status !== "out" && !r.c.stale);
     const min = (f) => live.length ? live.reduce((a, b) => f(b) < f(a) ? b : a) : null;
     return { cheap: min(r => r.c.total), fast: min(r => r.c.door + (r.o.overnight ? 600 : 0)), value: min(r => r.c.value) };
   }
@@ -562,7 +591,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       const stops = num(o.stops); const stopTxt = stops === 0 ? "Nonstop" : `${stops} stop${stops > 1 ? "s" : ""}`;
       const bookHref = o.link || (t ? flightsUrl(t, (t.destinations || []).find(d => d.name === o.dest) || { name: o.dest, airport: o.arrAirport }) : "#");
       const extrasSub = c.bagsIncl ? "bags included" : (c.bags == null ? "bags extra, not priced" : `incl. bags ${aud(c.bags)}`);
-      return `<tr class="opt ${o.status === "out" ? "ruled-out" : ""} ${o.status === "booked" ? "booked" : ""}" data-id="${esc(o.id)}">
+      return `<tr class="opt ${c.stale ? "stale" : ""} ${o.status === "out" ? "ruled-out" : ""} ${o.status === "booked" ? "booked" : ""}" data-id="${esc(o.id)}">
         <td class="c-opt"><div class="cell-stack">
           ${S.group === "dest" ? "" : `<span class="eyebrow">${esc(o.dest)}</span>`}
           <span class="airline">${esc(o.airline)}</span>
@@ -570,7 +599,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
           ${o.notes ? `<span class="route">${esc(o.notes)}</span>` : ""}
           ${chips ? `<div class="chips">${chips}</div>` : ""}
         </div></td>
-        <td data-label="Leaves ${esc(t.from || "MEL")}"><div class="cell-stack"><span class="time">${fmtTime(c.dep)}</span><span class="date">${fmtDate(c.dep)} · ${esc(t.from || "MEL")}</span></div></td>
+        <td data-label="Leaves"><div class="cell-stack"><span class="time">${fmtTime(c.dep)}</span><span class="date">${fmtDate(c.dep)} · ${esc(c.depAirport)}</span></div></td>
         <td data-label="Lands"><div class="cell-stack"><span class="time">${fmtTime(c.arr)}${plus > 0 ? `<span class="plus">+${plus}</span>` : ""}</span><span class="date">${fmtDate(c.arr)} · ${esc(o.arrAirport || "")}</span></div></td>
         <td class="c-ft" data-label="Flight time"><span class="time">${dur(num(o.flightMins))}</span></td>
         <td class="c-on" data-label="Airport onward"><div class="cell-stack"><span class="time">${num(o.transferMins) ? dur(num(o.transferMins)) : "–"}</span><span class="date">${esc(o.transferMethod || "")}</span></div></td>
@@ -625,7 +654,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const dest = o?.dest || (S.filter !== "all" ? S.filter : t.destinations?.[0]?.name);
     $("#o_dest").innerHTML = destOptionsHtml(dest);
     if (o) {
-      $("#o_airline").value = o.airline || ""; $("#o_stops").value = num(o.stops); $("#o_via").value = o.via || ""; $("#o_arrAirport").value = o.arrAirport || "";
+      $("#o_airline").value = o.airline || ""; $("#o_stops").value = num(o.stops); $("#o_via").value = o.via || ""; $("#o_arrAirport").value = o.arrAirport || ""; $("#o_depAirport").value = o.depAirport || t.from || "";
       $("#o_depart").value = o.depart || ""; $("#o_arrive").value = o.arrive || "";
       $("#o_fh").value = Math.floor(num(o.flightMins) / 60); $("#o_fm").value = num(o.flightMins) % 60;
       $("#o_fare").value = num(o.fare); $("#o_bags").value = o.bags ?? ""; $("#o_bagsIncl").checked = !!o.bagsIncluded;
@@ -647,7 +676,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const t = currentTrip();
     const data = {
       tripId: t.id, dest: $("#o_dest").value, airline: $("#o_airline").value.trim(), stops: num($("#o_stops").value), via: $("#o_via").value.trim(),
-      arrAirport: $("#o_arrAirport").value.trim().toUpperCase(), depart: $("#o_depart").value, arrive: $("#o_arrive").value, flightMins,
+      arrAirport: $("#o_arrAirport").value.trim().toUpperCase(), depAirport: $("#o_depAirport").value.trim().toUpperCase() || String(t.from || "").toUpperCase(), depart: $("#o_depart").value, arrive: $("#o_arrive").value, flightMins,
       fare: num($("#o_fare").value), bags: $("#o_bags").value === "" ? null : num($("#o_bags").value), bagsIncluded: $("#o_bagsIncl").checked,
       transferMethod: $("#o_tMethod").value.trim(), transferMins: num($("#o_th").value) * 60 + num($("#o_tm").value), transferCost: num($("#o_tCost").value),
       bufferMins: num($("#o_buffer").value, 60), overnight: $("#o_overnight").checked, link: $("#o_link").value.trim(), notes: $("#o_notes").value.trim(),
@@ -718,6 +747,8 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     if (act === "add") openOption(null);
     else if (act === "edit" && o) openOption(o);
     else if (act === "edit-trip") openTrip(currentTrip());
+    else if (act === "copy-req") { const txt = staleRequest(); try { await navigator.clipboard.writeText(txt); toast("Copied. Paste it into Claude."); } catch { const r = document.createRange(); r.selectNodeContents($("#staleReq")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast("Selected. Press Ctrl+C to copy."); } }
+    else if (act === "hide-stale") { S.hideStale = !S.hideStale; render(); }
     else if (act === "add-dest") { openTrip(currentTrip()); $("#t_dests").appendChild(destRow()); $("#t_dests").lastElementChild.querySelector("input").focus(); }
     else if (act === "pax-up" || act === "pax-down") { const t = currentTrip(); if (t) { const n = Math.max(1, num(t.travellers, 1) + (act === "pax-up" ? 1 : -1)); if (n !== num(t.travellers, 1)) updateTrip({ travellers: n }); } }
     else if (act === "new-trip") openTrip(null);
@@ -740,7 +771,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   });
 
   // ---------- Boot ----------
-  const STARTER = {"trips":[{"name":"Japan ski trip","from":"MEL","date":"2027-02-06","travellers":2,"createdAt":"2026-11-13T00:00:00Z","updatedAt":"2026-11-13T00:00:00Z","destinations":[{"name":"Niseko","airport":"CTS","transferMethod":"airport bus","transferMins":180,"transferCost":65},{"name":"Hakuba","airport":"NRT","transferMethod":"train to Tokyo, bullet train to Nagano, bus","transferMins":290,"transferCost":155}],"id":"japan-ski-2027"}],"options":[{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cebu Pacific","stops":1,"via":"Manila (3h 35m)","depart":"2027-02-06T01:35","arrive":"2027-02-06T16:50","flightMins":1035,"fare":771,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"n-cebu"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (5h 35m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T17:50","flightMins":1145,"fare":940,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"n-cx"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (2h 25m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T14:50","flightMins":965,"fare":1780,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"n-cx-fast"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Qantas","stops":1,"via":"Sydney (1h 35m)","depart":"2027-02-06T06:00","arrive":"2027-02-06T17:55","flightMins":835,"fare":1730,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"n-qf"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Jetstar","stops":2,"via":"Cairns (3h 15m), Tokyo Narita (12h 50m)","depart":"2027-02-06T06:15","arrive":"2027-02-07T08:40","flightMins":1705,"fare":637,"bags":null,"bagsIncluded":false,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"n-jq"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (2h 20m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T14:05","flightMins":920,"fare":782,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"h-cx"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"JAL","stops":0,"via":"","depart":"2027-02-06T07:20","arrive":"2027-02-06T15:20","flightMins":600,"fare":1300,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"h-jl"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"China Eastern","stops":1,"via":"Shanghai (2h 50m)","depart":"2027-02-06T01:50","arrive":"2027-02-06T15:55","flightMins":965,"fare":572,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"h-mu"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Jetstar","stops":1,"via":"Cairns (3h 15m)","depart":"2027-02-06T06:15","arrive":"2027-02-06T18:10","flightMins":835,"fare":526,"bags":null,"bagsIncluded":false,"bufferMins":60,"overnight":true,"link":"","notes":"Lands too late to reach Hakuba the same night","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"h-jq"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Qantas","stops":0,"via":"","depart":"2027-02-06T09:20","arrive":"2027-02-06T17:40","flightMins":620,"fare":1540,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":true,"link":"","notes":"Lands too late to reach Hakuba the same night","status":"","updatedAt":"2026-11-13T00:00:00Z","id":"h-qf"}]};
+  const STARTER = {"trips":[{"name":"Japan ski trip","from":"MEL","date":"2027-02-06","travellers":2,"createdAt":"2026-11-13T00:00:00Z","updatedAt":"2026-11-13T00:00:00Z","destinations":[{"name":"Niseko","airport":"CTS","transferMethod":"airport bus","transferMins":180,"transferCost":65},{"name":"Hakuba","airport":"NRT","transferMethod":"train to Tokyo, bullet train to Nagano, bus","transferMins":290,"transferCost":155}],"id":"japan-ski-2027"}],"options":[{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cebu Pacific","stops":1,"via":"Manila (3h 35m)","depart":"2027-02-06T01:35","arrive":"2027-02-06T16:50","flightMins":1035,"fare":771,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-cebu"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (5h 35m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T17:50","flightMins":1145,"fare":940,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-cx"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (2h 25m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T14:50","flightMins":965,"fare":1780,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-cx-fast"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Qantas","stops":1,"via":"Sydney (1h 35m)","depart":"2027-02-06T06:00","arrive":"2027-02-06T17:55","flightMins":835,"fare":1730,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-qf"},{"dest":"Niseko","arrAirport":"CTS","transferMethod":"Airport bus","transferMins":180,"transferCost":65,"tripId":"japan-ski-2027","airline":"Jetstar","stops":2,"via":"Cairns (3h 15m), Tokyo Narita (12h 50m)","depart":"2027-02-06T06:15","arrive":"2027-02-07T08:40","flightMins":1705,"fare":637,"bags":null,"bagsIncluded":false,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"n-jq"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Cathay Pacific","stops":1,"via":"Hong Kong (2h 20m)","depart":"2027-02-06T00:45","arrive":"2027-02-06T14:05","flightMins":920,"fare":782,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-cx"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"JAL","stops":0,"via":"","depart":"2027-02-06T07:20","arrive":"2027-02-06T15:20","flightMins":600,"fare":1300,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-jl"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"China Eastern","stops":1,"via":"Shanghai (2h 50m)","depart":"2027-02-06T01:50","arrive":"2027-02-06T15:55","flightMins":965,"fare":572,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":false,"link":"","notes":"","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-mu"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Jetstar","stops":1,"via":"Cairns (3h 15m)","depart":"2027-02-06T06:15","arrive":"2027-02-06T18:10","flightMins":835,"fare":526,"bags":null,"bagsIncluded":false,"bufferMins":60,"overnight":true,"link":"","notes":"Lands too late to reach Hakuba the same night","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-jq"},{"dest":"Hakuba","arrAirport":"NRT","transferMethod":"Train, bullet train, bus","transferMins":290,"transferCost":155,"tripId":"japan-ski-2027","airline":"Qantas","stops":0,"via":"","depart":"2027-02-06T09:20","arrive":"2027-02-06T17:40","flightMins":620,"fare":1540,"bags":null,"bagsIncluded":true,"bufferMins":60,"overnight":true,"link":"","notes":"Lands too late to reach Hakuba the same night","status":"","updatedAt":"2026-11-13T00:00:00Z","depAirport":"MEL","id":"h-qf"}]};
   const banner = (msg) => { const b = $("#banner"); b.textContent = msg; b.hidden = !msg; };
   function persist() { store.set("data", { trips: S.trips, options: S.options }); }
 
