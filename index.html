@@ -770,7 +770,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     for (const { d, res } of results) {
       if (!res || res.error || !Array.isArray(res.flights)) { errors.push(res?.message || "Search failed"); continue; }
       if (res.searchesLeftToday != null) left = res.searchesLeftToday;
-      const previous = S.options.filter(o => o.tripId === t.id && o.dest === d.name && o.source === "live");
+      const previous = S.options.filter(o => o.tripId === t.id && o.dest === d.name && o.source === "live" && String(o.depAirport || "").toUpperCase() === from);
       const keyOf = (o) => [o.airline, o.depart, o.arrAirport].join("|");
       const kept = new Map(previous.map(o => [keyOf(o), o]));
       S.options = S.options.filter(o => !previous.includes(o));
@@ -779,7 +779,7 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
         const old = kept.get(keyOf(f));
         S.options.push({
           dest: d.name, tripId: t.id, source: "live", checkedAt: res.checkedAt,
-          airline: f.airline, stops: f.stops, via: f.via, depAirport: f.depAirport, arrAirport: f.arrAirport,
+          airline: f.airline, stops: f.stops, via: f.via, depAirport: from, arrAirport: f.arrAirport,
           depart: f.depart, arrive: f.arrive, flightMins: f.flightMins, fare: f.fare,
           bagsIncluded: !!f.bagsIncluded, bags: null,
           transferMethod: d.transferMethod || "", transferMins: num(d.transferMins), transferCost: num(d.transferCost),
