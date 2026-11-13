@@ -90,6 +90,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .dest h3 { font-size: 16px; font-weight: 700; }
 .dest a { font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 500; }
 .dest a:hover { text-decoration: underline; }
+.dest-add { cursor: pointer; place-items: center; color: var(--accent); font-weight: 600; border-style: dashed; background: transparent; min-height: 64px; flex: 0 1 200px; }
+.dest-add:hover { background: var(--accent-soft); }
+.inline-name { font: inherit; letter-spacing: inherit; color: inherit; border: 1px solid transparent; border-radius: 8px; background: transparent; padding: 0 6px; margin-left: -7px; width: 100%; max-width: 22ch; min-width: 0; }
+.inline-name:hover { border-color: var(--line); }
+.inline-name:focus { border-color: var(--accent); background: var(--surface); outline: none; }
+.quick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin-top: 6px; }
+.q { display: grid; gap: 3px; }
+.q > span { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.q input { border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; background: var(--surface); font-weight: 600; min-width: 0; }
+.q input:hover { border-color: var(--accent); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.stepper button { border: 0; background: transparent; width: 32px; height: 33px; cursor: pointer; font-size: 17px; color: var(--accent); }
+.stepper button:hover { background: var(--accent-soft); }
+.stepper output { min-width: 28px; text-align: center; font-weight: 600; font-family: var(--f-mono); }
+.q-note { color: var(--muted); font-size: 13px; padding-bottom: 7px; }
 
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
@@ -113,8 +128,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Table */
 .table-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
 .table-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 1080px; }
-td.c-opt { min-width: 230px; max-width: 300px; }
+table { width: 100%; border-collapse: collapse; }
+td.c-opt { min-width: 170px; max-width: 300px; }
+.detail { display: none; font-size: 12px; color: var(--muted); font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+@media (max-width: 1439px) and (min-width: 941px) {
+  .c-ft, .c-on, .c-fare, .c-ext, thead tr.group { display: none; }
+  .detail { display: block; }
+  tbody td, thead th { padding-left: 8px; padding-right: 8px; }
+}
+@media (max-width: 1100px) and (min-width: 941px) {
+  .door { min-width: 0; }
+  .time { font-size: 14px; }
+  .row-actions { grid-template-columns: auto; justify-items: end; }
+}
 thead th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
 thead th.num, td.num { text-align: right; }
 thead th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
@@ -132,7 +158,7 @@ tbody tr.ruled-out td { opacity: .5; }
 tbody tr.booked td:first-child { box-shadow: inset 3px 0 0 var(--good); }
 .cell-stack { display: grid; gap: 2px; }
 .time { font-family: var(--f-mono); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.date { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.date { color: var(--muted); font-size: 12.5px; }
 .plus { font-family: var(--f-mono); font-size: 11px; color: var(--warn); font-weight: 600; margin-left: 3px; vertical-align: super; }
 .airline { font-weight: 600; font-size: 14.5px; }
 .route { color: var(--muted); font-size: 13px; }
@@ -188,16 +214,16 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
 .hint { font-size: 12.5px; color: var(--muted); }
 .parsed { display: grid; gap: 6px; }
 .parsed label { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-weight: 500; z-index: 50; }
+.toast { max-width: min(560px, calc(100vw - 32px)); text-align: center; position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-weight: 500; z-index: 50; }
 
 /* Phone: each option becomes a card */
-@media (max-width: 860px) {
+@media (max-width: 940px) {
   .picks { grid-template-columns: 1fr; }
   table { min-width: 0; }
   .table-scroll { overflow: visible; }
   thead { display: none; }
   tbody, tbody tr, tbody td { display: block; }
-  tbody tr.opt { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; padding: 14px; border-bottom: 1px solid var(--line); }
+  tbody tr.opt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 14px; padding: 14px; border-bottom: 1px solid var(--line); }
   tbody tr.opt td { padding: 0; border: 0; }
   tbody tr.opt td[data-label]::before { content: attr(data-label); display: block; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
   tbody tr.opt td.c-opt, tbody tr.opt td.c-door, tbody tr.opt td.c-act { grid-column: 1 / -1; }
@@ -406,7 +432,12 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   }
   function strip(o) { const { id, ...rest } = o; return rest; }
 
-  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2200); }
+  async function updateTrip(patch, msg) {
+    const t = currentTrip(); if (!t) return;
+    try { await saveDoc("trips", t.id, { ...strip(t), ...patch, updatedAt: new Date().toISOString() }); if (msg) toast(msg); }
+    catch (err) { failed(err); }
+  }
+  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, Math.max(2200, msg.length * 55)); }
   function failed(e) { toast("That didn't save: " + (e && e.message ? e.message : "try again")); }
 
   // ---------- Render ----------
@@ -433,17 +464,23 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       <div class="trip-top">
         <div class="trip-title">
           <span class="eyebrow">Trip Picker · one way</span>
-          <h1>${esc(t.name)}</h1>
-          <div class="trip-meta">
-            <span>From <b>${esc(t.from || "MEL")}</b></span>
-            <span>Leaving <b>${dt ? dt.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "date not set"}</b></span>
-            <span><b>${num(t.travellers, 1)}</b> traveller${num(t.travellers, 1) === 1 ? "" : "s"}</span>
-            <span><b>${tripOptions().length}</b> options saved</span>
+          <h1><input class="inline-name" id="q_name" value="${esc(t.name)}" aria-label="Trip name" title="Click to rename"></h1>
+          <div class="quick">
+            <label class="q"><span>From</span><input id="q_from" value="${esc(t.from || "MEL")}" size="6" maxlength="20"></label>
+            <label class="q"><span>Leaving</span><input id="q_date" type="date" value="${esc(t.date || "")}"></label>
+            <div class="q"><span id="q_paxLabel">Travellers</span>
+              <div class="stepper" role="group" aria-labelledby="q_paxLabel">
+                <button type="button" data-act="pax-down" aria-label="One fewer traveller">−</button>
+                <output id="q_pax">${num(t.travellers, 1)}</output>
+                <button type="button" data-act="pax-up" aria-label="One more traveller">+</button>
+              </div>
+            </div>
+            <span class="q-note">${tripOptions().length} options saved${dt ? "" : " · set a date to search flights"}</span>
           </div>
         </div>
         <div class="trip-actions">
           ${tripOpts}
-          <button class="btn" data-act="edit-trip">Trip details</button>
+          <button class="btn" data-act="edit-trip">Edit destinations</button>
           <button class="btn" data-act="new-trip">New trip</button>
           <button class="btn" data-act="share">Copy share link</button>
           <button class="btn primary" data-act="add">Add option</button>
@@ -451,9 +488,11 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
       </div>
       <div class="dests">${(t.destinations || []).map(d => `
         <div class="dest">
-          <div class="dest-row"><h3>${esc(d.name)}</h3><a href="${esc(flightsUrl(t, d))}" target="_blank" rel="noopener">Search flights to ${esc(d.airport || d.name)} ↗</a></div>
+          <div class="dest-row"><h3>${esc(d.name)}</h3><button type="button" class="btn ghost small" data-act="edit-trip">Edit</button></div>
           <span class="muted">${esc(d.airport || "?")} airport${num(d.transferMins) ? `, then ${esc(d.transferMethod || "transfer")} · ${dur(num(d.transferMins))} · ${aud(num(d.transferCost))} pp` : ""}</span>
-        </div>`).join("")}</div>`;
+          <a href="${esc(flightsUrl(t, d))}" target="_blank" rel="noopener">Search flights from ${esc(t.from || "MEL")} to ${esc(d.airport || d.name)} ↗</a>
+        </div>`).join("")}
+        <button type="button" class="dest dest-add" data-act="add-dest">+ Add a destination</button></div>`;
   }
 
   function renderFilter() {
@@ -508,8 +547,8 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     const pax = rows[0].c.pax;
     const head = `<thead>
       <tr class="group"><th></th><th colspan="3" class="span">Flight</th><th class="span">Ground</th><th></th><th colspan="4" class="span">Cost per person${pax > 1 ? ` · last column for ${pax}` : ""}</th><th></th></tr>
-      <tr>${th("Option", "fare")}${th("Leaves", "depart")}<th>Lands</th><th>Flight time</th><th>Airport onward</th>${th("Door to door", "door")}
-        <th class="num">Fare</th><th class="num">Transfer + bags</th>${th("Total", "total", "num")}${th(pax > 1 ? `For ${pax}` : "Value", pax > 1 ? "total" : "value", "num")}<th class="num">Status</th></tr></thead>`;
+      <tr>${th("Option", "fare")}${th("Leaves", "depart")}<th>Lands</th><th class="c-ft">Flight time</th><th class="c-on">Airport onward</th>${th("Door to door", "door")}
+        <th class="num c-fare">Fare</th><th class="num c-ext">Transfer + bags</th>${th("Total", "total", "num")}${th(pax > 1 ? `For ${pax}` : "Value", pax > 1 ? "total" : "value", "num")}<th class="num">Status</th></tr></thead>`;
 
     const rowHtml = (r) => {
       const o = r.o, c = r.c; const tags = [];
@@ -533,15 +572,16 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
         </div></td>
         <td data-label="Leaves ${esc(t.from || "MEL")}"><div class="cell-stack"><span class="time">${fmtTime(c.dep)}</span><span class="date">${fmtDate(c.dep)} · ${esc(t.from || "MEL")}</span></div></td>
         <td data-label="Lands"><div class="cell-stack"><span class="time">${fmtTime(c.arr)}${plus > 0 ? `<span class="plus">+${plus}</span>` : ""}</span><span class="date">${fmtDate(c.arr)} · ${esc(o.arrAirport || "")}</span></div></td>
-        <td data-label="Flight time"><span class="time">${dur(num(o.flightMins))}</span></td>
-        <td data-label="Airport onward"><div class="cell-stack"><span class="time">${num(o.transferMins) ? dur(num(o.transferMins)) : "–"}</span><span class="date">${esc(o.transferMethod || "")}</span></div></td>
+        <td class="c-ft" data-label="Flight time"><span class="time">${dur(num(o.flightMins))}</span></td>
+        <td class="c-on" data-label="Airport onward"><div class="cell-stack"><span class="time">${num(o.transferMins) ? dur(num(o.transferMins)) : "–"}</span><span class="date">${esc(o.transferMethod || "")}</span></div></td>
         <td class="c-door" data-label="Door to door"><div class="door">
           <span class="time">${dur(c.door)}${o.overnight ? ` <span class="date">+ a night</span>` : ""}</span>
           <div class="bar" role="img" aria-label="${dur(num(o.flightMins))} flying, ${dur(c.buffer)} waiting, ${dur(num(o.transferMins))} on the ground"><span class="f" style="width:${fW}%"></span><span class="w" style="width:${wW}%"></span><span class="g" style="width:${gW}%"></span></div>
+          <span class="detail">${dur(num(o.flightMins))} flight${num(o.transferMins) ? ` + ${dur(num(o.transferMins))} ${esc(o.transferMethod || "transfer")}` : ""}</span>
         </div></td>
-        <td class="num" data-label="Fare"><span class="money">${aud(num(o.fare))}</span></td>
-        <td class="num" data-label="Transfer + bags"><div class="cell-stack"><span class="money">${aud(c.extras)}</span><span class="money-sub">${extrasSub}</span></div></td>
-        <td class="num" data-label="Total pp"><span class="money total">${aud(c.total)}</span></td>
+        <td class="num c-fare" data-label="Fare"><span class="money">${aud(num(o.fare))}</span></td>
+        <td class="num c-ext" data-label="Transfer + bags"><div class="cell-stack"><span class="money">${aud(c.extras)}</span><span class="money-sub">${extrasSub}</span></div></td>
+        <td class="num" data-label="Total pp"><div class="cell-stack"><span class="money total">${aud(c.total)}</span><span class="detail">fare ${aud(num(o.fare))}<br>+ ${aud(c.extras)} ${c.bagsIncl ? "transfer" : (c.bags == null ? "transfer, bags extra" : "transfer and bags")}</span></div></td>
         <td class="num" data-label="${pax > 1 ? `For ${pax}` : "Value score"}"><div class="cell-stack"><span class="money">${aud(pax > 1 ? c.total * pax : c.value)}</span></div></td>
         <td class="c-act num"><div class="row-actions">
           <select class="status-sel" data-act="status" aria-label="Status">
@@ -678,6 +718,8 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
     if (act === "add") openOption(null);
     else if (act === "edit" && o) openOption(o);
     else if (act === "edit-trip") openTrip(currentTrip());
+    else if (act === "add-dest") { openTrip(currentTrip()); $("#t_dests").appendChild(destRow()); $("#t_dests").lastElementChild.querySelector("input").focus(); }
+    else if (act === "pax-up" || act === "pax-down") { const t = currentTrip(); if (t) { const n = Math.max(1, num(t.travellers, 1) + (act === "pax-up" ? 1 : -1)); if (n !== num(t.travellers, 1)) updateTrip({ travellers: n }); } }
     else if (act === "new-trip") openTrip(null);
     else if (act === "share") shareTrip();
     else if (act === "star" && o) { try { await saveDoc("options", o.id, { ...strip(o), status: o.status === "shortlist" ? "" : "shortlist" }); } catch (err) { failed(err); } }
@@ -685,6 +727,11 @@ legend { font-family: var(--f-display); font-weight: 700; font-size: 13px; lette
   document.addEventListener("change", async (e) => {
     const el = e.target;
     if (el.matches('[data-act="status"]')) { const o = S.options.find(x => x.id === el.closest("tr").dataset.id); if (o) { try { await saveDoc("options", o.id, { ...strip(o), status: el.value }); } catch (err) { failed(err); } } }
+    else if (el.id === "q_name") { const v = el.value.trim(); if (v) updateTrip({ name: v }, "Trip renamed"); else render(); }
+    else if (el.id === "q_from" || el.id === "q_date") {
+      const key = el.id === "q_from" ? "from" : "date"; const v = el.value.trim();
+      updateTrip({ [key]: v }, tripOptions().length ? `Saved. The flights already listed are still for the old ${key === "from" ? "starting point" : "date"}: ask Claude to research again, or edit them.` : "Saved");
+    }
     else if (el.id === "tripSel") { S.tripId = el.value; store.set("trip", S.tripId); S.filter = "all"; render(); }
     else if (el.id === "sortSel") { S.sort = el.value; S.sortDir = 1; store.set("sort", S.sort); render(); }
     else if (el.id === "groupSel") { S.group = el.value; store.set("group", S.group); render(); }
